@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using AutoMapper;
 using OnsMentalHealth.BLL.Manager;
 using OnsMentalHealth.BLL.Manager.AccountsManager;
 using OnsMentalHealth.BLL.Manager.BlogsManager;
@@ -13,11 +13,17 @@ using OnsMentalHealth.DAl.Reposatory;
 using OnsMentalHealth.DAl.Reposatory.BlogsRepo;
 using OnsMentalHealth.DAl.Reposatory.Comments;
 using OnsMentalHealth.DAl.Repositories;
+using OnsMentalHealth.DAL.Repository;
 using OnsMentalHealthSolution.DAL.Context;
 using OnsMentalHealthSolution.DAL.Entities;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddScoped<ITherapistRepo, TherapistRepo>();
+
+
+builder.Services.AddScoped<ITherapistManager, TherapistManager>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
