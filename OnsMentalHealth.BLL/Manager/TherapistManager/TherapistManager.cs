@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
 using OnsMentalHealthSolution.DAL.Entities; 
 using OnsMentalHealth.DAL.Repository;       
 using OnsMentalHealth.BLL.DTOs.Therapists;  
@@ -8,30 +9,47 @@ namespace OnsMentalHealth.BLL.Manager
     {
         private readonly ITherapistRepo _repo;
         private readonly UserManager<User> _userManager;
+        private readonly IMemoryCache _cache;
 
-        
-        public TherapistManager(ITherapistRepo repo, UserManager<User> userManager)
+
+        public TherapistManager(ITherapistRepo repo, UserManager<User> userManager, IMemoryCache cache)
         {
             _repo = repo;
             _userManager = userManager;
+            _cache = cache;
         }
 
         // 1. Get All 
         public async Task<List<TherapistReadDTO>> GetAllTherapistsAsync(int pageNumber, int pageSize)
         {
-            var therapists = await _repo.GetAllAsync(pageNumber, pageSize);
+           
+            string cacheKey = $"Therapists_Page{pageNumber}_Size{pageSize}";
 
-            return therapists.Select(t => new TherapistReadDTO
+            
+            if (!_cache.TryGetValue(cacheKey, out List<TherapistReadDTO> cachedList))
             {
-                Id = t.TherapistId,
-                
-                FullName = t.User != null ? t.User.UserName : "Unknown",
-                Email = t.User != null ? t.User.Email : "Unknown",
+                var therapists = await _repo.GetAllAsync(pageNumber, pageSize);
 
-                Specialization = t.Speclization,
-                City = t.City,
-                Gender = t.Gender
-            }).ToList();
+                cachedList = therapists.Select(t => new TherapistReadDTO
+                {
+                    Id = t.TherapistId,
+                    FullName = t.User != null ? t.User.UserName : "Unknown",
+                    Email = t.User != null ? t.User.Email : "Unknown",
+                    Specialization = t.Speclization,
+                    City = t.City,
+                    Gender = t.Gender
+                }).ToList();
+
+                
+                var cacheOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(1));
+
+                
+                _cache.Set(cacheKey, cachedList, cacheOptions);
+            }
+
+         
+            return cachedList;
         }
 
         // 2. Get By Id
@@ -103,14 +121,6 @@ namespace OnsMentalHealth.BLL.Manager
             therapist.Speclization = updateDto.Specialization;
             therapist.City = updateDto.City;
 
-            // ملحوظة: لو الـ DTO فيه الاسم، لازم نجيب الـ User ونعمله Update
-            /*
-            if (therapist.User != null)
-            {
-                therapist.User.UserName = $"{updateDto.FirstName}{updateDto.LastName}";
-                await _userManager.UpdateAsync(therapist.User);
-            }
-           */
             await _repo.UpdateAsync(therapist);
             return true;
         }
